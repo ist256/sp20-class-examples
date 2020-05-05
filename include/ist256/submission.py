@@ -24,6 +24,7 @@ class Submission:
 
         self.__netid__ = self.get_netid()
         self.__notebook__ = self.get_notebook_path()
+        self.__notebook_full_path__ = f"{os.environ.get('HOME')}/{self.__notebook__}"
         self.__course__, self.__term__, self.__unit__, self.__assignment__, self.__assignment_type__ = self.parse_notebook_path()
         self.__bucket__ = f"{self.__course__}-{self.__term__}"
   
@@ -37,6 +38,14 @@ class Submission:
         self.__time_until_due__ = self.__due_date__ - self.__submit_date__ 
         self.__on_time__ = self.__submit_date__  <= self.__due_date__
 
+        self.__target__ = self.generate_target()
+
+        
+    def generate_target(self):
+        late = "LATE-" if not self.__on_time__ else ""
+        filename = f"{late}-{self.__netid__}.ipynb"
+        return f"{self.__instructor__}/{self.__unit__}/{self.__assignment__}/{filename}"
+
     def set_timezone(self):
         '''
         save on a lot of date math.
@@ -48,30 +57,87 @@ class Submission:
         if not self.__mc__.bucket_exists(self.__bucket__):
             self.__mc__.make_bucket(self.__bucket__)
         
-    def submit(self):
-        '''
-        Performa a Submissions
-        '''
+    def get_file_date(self):
+        file = self.generate_target()
+        for o in self.__mc__.list_objects(self.__bucket__, file):
+            return o.last_modified.astimezone(tz.gettz(self.__timezone__))
+        else:
+            return None
+        
+    def format_date(self,date):
+        return date.strftime("%Y-%m-%d %I:%M:%S %p")
+        
+    def debug(self):
+        last_mod = self.get_file_date()
+        print("\n=================")
+        print("===== DEBUG =====")
+        print("=================\n")
+        
         print(f"NETID       = {self.__netid__}")
         print(f"PATH        = {self.__notebook__}")
+        print(f"FULL PATH   = {self.__notebook_full_path__}")
         print(f"COURSE      = {self.__course__}")
         print(f"TERM        = {self.__term__}")
         print(f"INSTRUCTOR  = {self.__instructor__}")        
         print(f"UNIT/LESSON = {self.__unit__}")
         print(f"ASSIGNMENT  = {self.__assignment__}")
         print(f"TYPE        = {self.__assignment_type__}")        
-        print(f"SUBMIT DATE = {self.__submit_date__}")
-        print(f"DUE DATE    = {self.__due_date__}")
+        print(f"SUBMIT DATE = {self.format_date(self.__submit_date__)}")
+        print(f"DUE DATE    = {self.format_date(self.__due_date__)}")
         print(f"DUE IN      = {self.__time_until_due__}")
         print(f"ON TIME     = {self.__on_time__}")
-        print(f"SAVED TO ???")
-        print(f"STATUS ?? OK?")
-        print("===============================")
-        print(f"BUCKET       = {self.__bucket__}")
-        print(f"TIME ZONE    = {self.__timezone__}")
+        print(f"SAVE TO     = {self.__target__}")
+        print(f"BUCKET      = {self.__bucket__}")
+        print(f"TIME ZONE   = {self.__timezone__}")
+        print(f"ASSIGN. LAST MOD.= {self.format_date(last_mod)}")        
+        return            
         
+    def submit(self):
+        '''
+        Perform a Submission
+        '''
+        print("=== SUMBISSON DETAILS ===")
+        print(f"Your Netid......... {self.__netid__}")
+        print(f"Your Instructor.... {self.__instructor__}")        
+        print(f"Assigment Name .... {self.__assignment__}")
+        print(f"Assignment Type ... {self.__assignment_type__}")        
+        print(f"Submission Date ... {self.format_date(self.__submit_date__)}")
+        print(f"Due Date .......... {self.format_date(self.__due_date__)}")
         
-
+        last_mod = self.get_file_date()
+        if not self.__on_time__:            
+            print("\n=== WARNING: Your Submission is LATE! ===")
+            print(f"Your Submission Date   : {self.format_date(self.__submit_date__)}")
+            print(f"Due Date For Assignment: {self.format_date(self.__due_date__)}")
+            late_confirm = input("Submit This Assignment Anyways [y/n] ?").lower()
+            if late_confirm == 'n':
+                print("Aborting Submission.")
+                return
+            elif late_confirm == 'debug':
+                self.debug()
+                return 
+        if last_mod != None:
+                print("\n=== WARNING: This is a Duplicate Submission ==")
+                print(f"You Submitted This Assigment On: {self.format_date(last_mod)}")
+                again = input("Overwrite Your Previous Submission [y/n] ? ").lower()
+                if again == 'n':
+                    print("Aborting.")
+                    return
+                elif again == 'debug':
+                    self.debug()
+                    return 
+                
+        print("\n=== SUBMITTING  ===")
+        print(f"Uploading: {self.__assignment__}\n To: {self.__target__} ...")
+        etag = self.upload_file()
+        print(f"Done!\nReciept: {etag}")
+            
+    def upload_file(self):
+        with open (self.__notebook_full_path__, 'rb') as f:
+            stats = os.stat(self.__notebook_full_path__)
+            etag = self.__mc__.put_object(self.__bucket__, self.__target__, f , stats.st_size )
+            return etag        
+        
     def load_dataframe(self, file_url, offset=0):
         csv_file = True if file_url.lower().endswith(".csv") else False
         if csv_file:

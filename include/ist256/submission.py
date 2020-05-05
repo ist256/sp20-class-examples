@@ -32,9 +32,9 @@ class Submission:
 
         self.__roster__ = self.load_dataframe(roster_url)
         self.__assignments__ = self.load_dataframe(assignments_url)
-        self.__instructor__ = self.__roster__['instructor'][self.__roster__['netid']==self.__netid__][0]
+        self.__instructor__ = self.__roster__['instructor'][self.__roster__['netid']==self.__netid__].values[0]
         self.__submit_date__ = datetime.now()
-        self.__due_date__ = parser.parse(self.__assignments__['duedate'][ self.__assignments__['unit'] == self.__unit__][self.__assignments__['name'] == self.__assignment__][0])
+        self.__due_date__ = parser.parse(self.__assignments__['duedate'][ self.__assignments__['unit'] == self.__unit__][self.__assignments__['name'] == self.__assignment__].values[0])
         self.__time_until_due__ = self.__due_date__ - self.__submit_date__ 
         self.__on_time__ = self.__submit_date__  <= self.__due_date__
 
@@ -43,7 +43,7 @@ class Submission:
         
     def generate_target(self):
         late = "LATE-" if not self.__on_time__ else ""
-        filename = f"{late}-{self.__netid__}.ipynb"
+        filename = f"{late}{self.__netid__}.ipynb"
         return f"{self.__instructor__}/{self.__unit__}/{self.__assignment__}/{filename}"
 
     def set_timezone(self):
@@ -128,7 +128,7 @@ class Submission:
                     return 
                 
         print("\n=== SUBMITTING  ===")
-        print(f"Uploading: {self.__assignment__}\n To: {self.__target__} ...")
+        print(f"Uploading: {self.__assignment__}\nTo: {self.__target__} ...")
         etag = self.upload_file()
         print(f"Done!\nReciept: {etag}")
             
@@ -185,6 +185,6 @@ class Submission:
         else:
             assign_type = "Unknown"
         return items[1], items[2],items[4], items[5], assign_type
-
     
- 
+    
+    

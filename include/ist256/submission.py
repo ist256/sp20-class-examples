@@ -179,7 +179,7 @@ class Submission:
         items = self.__notebook__.split("/")
         if items[5].startswith("CCL"):
             assign_type="Lab"
-        elif items[5].startswith("HW"):
+        elif items[5].startswith("HW") or items[5].startswith("NYC"):
             assign_type="Homework"
         else:
             assign_type = "Unknown"

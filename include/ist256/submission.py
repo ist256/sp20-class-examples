@@ -12,14 +12,21 @@ from minio import Minio
 from minio.error import ResponseError
 
 
+
 class Submission:
     
     def __init__(self, assignments_url='metadata/assignments.csv', roster_url='metadata/roster.csv', 
-                 minio_server='10.30.24.123:9000', access_key='sesuro5pka32vtt',secret_key='c5977GQW2CHF6wsNG5bK'):
+                 minio_server='10.30.24.123:9000', access_key='sesuro5pka32vtt',secret_key='c5977GQW2CHF6wsNG5bK', debug=False):
 
+        if debug:
+            logging.basicConfig(format='%(asctime)s %(levelname)s ==> %(message)s', level=logging.DEBUG,datefmt='%m/%d/%Y %I:%M:%S %p')
+        else:
+            logging.basicConfig(format='%(asctime)s %(levelname)s ==> %(message)s', level=logging.INFO,datefmt='%m/%d/%Y %I:%M:%S %p')
+        
         self.__timezone__ = "America/New_York"
         self.set_timezone()
 
+        logging.debug("Minio Info", minio_server, access_key=access_key, secret_key=secret_key)
         self.__mc__ = Minio(minio_server, access_key=access_key, secret_key=secret_key, secure=False)
 
         self.__netid__ = self.get_netid()
@@ -69,27 +76,24 @@ class Submission:
         
     def debug(self):
         last_mod = self.get_file_date()
-        print("\n=================")
-        print("===== DEBUG =====")
-        print("=================\n")
         
-        print(f"NETID       = {self.__netid__}")
-        print(f"PATH        = {self.__notebook__}")
-        print(f"FULL PATH   = {self.__notebook_full_path__}")
-        print(f"COURSE      = {self.__course__}")
-        print(f"TERM        = {self.__term__}")
-        print(f"INSTRUCTOR  = {self.__instructor__}")        
-        print(f"UNIT/LESSON = {self.__unit__}")
-        print(f"ASSIGNMENT  = {self.__assignment__}")
-        print(f"TYPE        = {self.__assignment_type__}")        
-        print(f"SUBMIT DATE = {self.format_date(self.__submit_date__)}")
-        print(f"DUE DATE    = {self.format_date(self.__due_date__)}")
-        print(f"DUE IN      = {self.__time_until_due__}")
-        print(f"ON TIME     = {self.__on_time__}")
-        print(f"SAVE TO     = {self.__target__}")
-        print(f"BUCKET      = {self.__bucket__}")
-        print(f"TIME ZONE   = {self.__timezone__}")
-        print(f"ASSIGN. LAST MOD.= {self.format_date(last_mod)}")        
+        logging.debug(f"NETID       = {self.__netid__}")
+        logging.debug(f"PATH        = {self.__notebook__}")
+        logging.debug(f"FULL PATH   = {self.__notebook_full_path__}")
+        logging.debug(f"COURSE      = {self.__course__}")
+        logging.debug(f"TERM        = {self.__term__}")
+        logging.debug(f"INSTRUCTOR  = {self.__instructor__}")        
+        logging.debug(f"UNIT/LESSON = {self.__unit__}")
+        logging.debug(f"ASSIGNMENT  = {self.__assignment__}")
+        logging.debug(f"TYPE        = {self.__assignment_type__}")        
+        logging.debug(f"SUBMIT DATE = {self.format_date(self.__submit_date__)}")
+        logging.debug(f"DUE DATE    = {self.format_date(self.__due_date__)}")
+        logging.debug(f"DUE IN      = {self.__time_until_due__}")
+        logging.debug(f"ON TIME     = {self.__on_time__}")
+        logging.debug(f"SAVE TO     = {self.__target__}")
+        logging.debug(f"BUCKET      = {self.__bucket__}")
+        logging.debug(f"TIME ZONE   = {self.__timezone__}")
+        logging.debug(f"ASSIGN. LAST MOD.= {self.format_date(last_mod)}")        
         return            
         
     def submit(self):
@@ -113,9 +117,6 @@ class Submission:
             if late_confirm == 'n':
                 print("Aborting Submission.")
                 return
-            elif late_confirm == 'debug':
-                self.debug()
-                return 
         if last_mod != None:
                 print("\n=== WARNING: This is a Duplicate Submission ==")
                 print(f"You Submitted This Assigment On: {self.format_date(last_mod)}")
@@ -123,9 +124,6 @@ class Submission:
                 if again == 'n':
                     print("Aborting.")
                     return
-                elif again == 'debug':
-                    self.debug()
-                    return 
                 
         print("\n=== SUBMITTING  ===")
         print(f"Uploading: {self.__assignment__}\nTo: {self.__target__} ...")
